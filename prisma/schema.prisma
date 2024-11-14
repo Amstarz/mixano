@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          UserRole
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  salesRecords  Sale[]    @relation("SalesPerson")
+  collections   Invoice[] @relation("Collector")
+  customers     Customer[]
+}
+
+model Customer {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  phone         String
+  address       String
+  loyaltyPoints Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  assignedTo    User      @relation(fields: [userId], references: [id])
+  userId        String
+  invoices      Invoice[]
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  sku         String    @unique
+  price       Float
+  stock       Int
+  minStock    Int
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  invoiceItems InvoiceItem[]
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  number        String        @unique
+  customerId    String
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  items         InvoiceItem[]
+  total         Float
+  status        InvoiceStatus
+  dueDate       DateTime
+  collectorId   String?
+  collector     User?         @relation("Collector", fields: [collectorId], references: [id])
+  tracking      Tracking[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model InvoiceItem {
+  id        String  @id @default(cuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+}
+
+model Sale {
+  id          String   @id @default(cuid())
+  salesId     String
+  salesperson User     @relation("SalesPerson", fields: [salesId], references: [id])
+  amount      Float
+  commission  Float
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Tracking {
+  id        String   @id @default(cuid())
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  status    String
+  location  String?
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  message   String
+  recipient String
+  read      Boolean         @default(false)
+  createdAt DateTime        @default(now())
+}
+
+enum UserRole {
+  ADMIN
+  SALES
+  COLLECTOR
+  STAFF
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum NotificationType {
+  INVOICE
+  TRACKING
+  LOYALTY
+  COLLECTION
+  STOCK
+}
